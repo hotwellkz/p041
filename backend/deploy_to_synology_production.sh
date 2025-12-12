@@ -84,6 +84,9 @@ fi
 # 3. Переход в директорию backend
 cd "$SYNO_APP_PATH/backend" || error "Директория backend не найдена"
 
+# Исправление окончаний строк (CRLF -> LF) для скрипта деплоя
+sed -i 's/\r$//' deploy_to_synology_production.sh 2>/dev/null || true
+
 # Установка прав на выполнение для скрипта деплоя
 chmod +x deploy_to_synology_production.sh 2>/dev/null || true
 
