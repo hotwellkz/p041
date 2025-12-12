@@ -113,18 +113,27 @@ success "TypeScript скомпилирован"
 # 7. Создание .env для продакшена
 info "Настраиваю .env для продакшена..."
 if [ ! -f ".env" ]; then
-    info "Создаю .env из env.example..."
-    cp env.example .env
+    info "Создаю .env из env.production.example (если есть) или env.example..."
+    if [ -f "env.production.example" ]; then
+        cp env.production.example .env
+    else
+        cp env.example .env
+    fi
 fi
 
 # Обновление критичных переменных в .env
 info "Обновляю переменные окружения..."
 
-# Используем sed для обновления переменных (если они уже есть) или добавляем новые
-cat >> .env << EOF
+# Удаляем дубликаты и обновляем переменные
+# Используем временный файл для безопасного обновления
+TEMP_ENV=$(mktemp)
+grep -v "^NODE_ENV=" .env | grep -v "^PORT=" | grep -v "^STORAGE_ROOT=" | grep -v "^BACKEND_URL=" > "$TEMP_ENV" 2>/dev/null || true
+
+# Добавляем/обновляем критичные переменные
+cat >> "$TEMP_ENV" << EOF
 
 # ============================================
-# Production Settings (Synology)
+# Production Settings (Synology) - Auto-generated
 # ============================================
 NODE_ENV=production
 PORT=$BACKEND_PORT
@@ -132,7 +141,15 @@ STORAGE_ROOT=$SYNO_STORAGE_PATH
 BACKEND_URL=http://$VPS_PUBLIC_IP:$VPS_PUBLIC_PORT
 EOF
 
-success ".env настроен"
+mv "$TEMP_ENV" .env
+
+info "⚠️  ВАЖНО: Проверьте и настройте следующие переменные в .env:"
+info "   - FIREBASE_SERVICE_ACCOUNT (валидный JSON)"
+info "   - TELEGRAM_SESSION_SECRET (64 hex символа)"
+info "   - TELEGRAM_API_ID, TELEGRAM_API_HASH"
+info "   - FRONTEND_ORIGIN (URL вашего фронтенда на Netlify)"
+
+success ".env настроен (базовые переменные)"
 
 # 8. Установка pm2 (если не установлен)
 info "Проверяю pm2..."
